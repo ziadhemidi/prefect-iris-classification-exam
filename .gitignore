@@ -2,3 +2,8 @@ __pycache__/
 .venv/
 .pytest_cache/
 mlruns/
+
+.DS_Store
+.env
+correction_exam_prefect.egg-info/**
+.prefect/

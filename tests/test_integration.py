@@ -24,9 +24,9 @@ def test_docker_deployment():
     
     # Check if the required images exist
     required_images = [
-        "<name-of-mlflow-container>:latest",
-        "<name-of-prefect-server-container>:latest"
-    ]
+    "mlflow-server:latest",
+    "prefect-server:latest",
+    ]   
     
     # Get list of Docker images
     result = subprocess.run(["docker", "images", "--format", "{{.Repository}}:{{.Tag}}"], 

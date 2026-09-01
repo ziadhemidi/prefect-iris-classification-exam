@@ -6,6 +6,7 @@ This is a boilerplate that needs to be completed as part of the challenge.
 import asyncio
 import os
 from prefect.runner.storage import GitRepository
+from prefect_github import GitHubRepository
 from prefect_github import GitHubCredentials
 from prefect import flow
 
@@ -37,7 +38,40 @@ def create_deployment():
     #    - name: "iris-model-local"
     #    - work_pool_name: WORK_POOL_NAME
     #    - tags: ["ml", "iris", "local"]
-    pass
+    
+    # Option 1: Using GitHub Repository
+    # 1. Load GitHub credentials from the block named "github-credentials"
+    github_token = os.getenv("GITHUB_TOKEN")
+    if not github_token:
+        raise ValueError("GITHUB_TOKEN environment variable not set")
+    github_credentials = GitHubCredentials(token=github_token)
+    # 2. Get repository URL from GITHUB_REPOSITORY environment variable
+    repository_url = os.getenv("GITHUB_REPOSITORY")
+    if not repository_url:
+        raise ValueError("GITHUB_REPOSITORY environment variable not set")
+    # 3. Create GitRepository object with:
+    github_repo = GitHubRepository(
+        repository_url=os.getenv("GITHUB_REPOSITORY"),
+        reference=os.getenv("GITHUB_BRANCH", "main"),
+        credentials=github_credentials
+    )
+    
+    github_repo.save(
+        "github-repository",
+        overwrite=True,
+    )
+    # 4. Create flow from source
+    source_flow = flow.from_source(
+        source=github_repo,
+        entrypoint="flows/iris_flow_mlflow.py:iris_classification_flow",
+    )
+
+    # 5. Deploy the flow
+    source_flow.deploy(
+        name="iris-model",
+        work_pool_name=WORK_POOL_NAME,
+        tags=["ml", "iris"],
+    )
 
 if __name__ == "__main__":
     create_deployment()

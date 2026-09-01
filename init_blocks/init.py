@@ -19,10 +19,10 @@ async def create_blocks():
     #    - Get token from GITHUB_TOKEN environment variable
     #    - Create GitHubCredentials with token
     #    - Save with name="github-credentials"
-    github_token = None
+    github_token = os.getenv("GITHUB_TOKEN")
     if not github_token:
         raise ValueError("GITHUB_TOKEN environment variable not set")
-    credentials = None
+    credentials = GitHubCredentials(token=github_token)
     await credentials.save(name="github-credentials", overwrite=True)
     
     # 3. Create GitHub repository block:
@@ -32,7 +32,7 @@ async def create_blocks():
     #      * reference from GITHUB_BRANCH environment variable
     #      * credentials from step 1
     #    - Save with name="github-repo"
-    repository_url = None
+    repository_url = os.getenv("GITHUB_REPOSITORY")
     if not repository_url:
         raise ValueError("GITHUB_REPOSITORY environment variable not set")
     github_repo = GitHubRepository(

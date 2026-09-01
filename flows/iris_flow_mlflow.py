@@ -22,6 +22,11 @@ def setup_variables():
     # - rf_test_size: test split ratio (default: 0.2)
     # - model_name: name for MLflow logging (default: iris_model)
     # - model_version: version for MLflow logging (default: 1)
+    Variable.set("rf_n_estimators", 100)
+    Variable.set("rf_max_depth", 10)
+    Variable.set("rf_test_size", 0.2)
+    Variable.set("model_name", "iris_model")
+    Variable.set("model_version", 1)
     
 
 @task
@@ -32,8 +37,8 @@ def load_data() -> Tuple[np.ndarray, np.ndarray]:
     # 2. Load iris dataset using load_iris(return_X_y=True)
     # 3. Log the dataset shape
     # 4. Return X, y
-    logger = None
-    X, y = None
+    logger = get_run_logger()
+    X, y = load_iris(return_X_y=True)
     logger.info(f"Dataset loaded with shape: {X.shape}")
     return X, y
 
@@ -44,9 +49,9 @@ def split_data(X: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np
     # 1. Get test_size from Prefect variables
     # 2. Use train_test_split
     # 3. Return X_train, X_test, y_train, y_test
-    test_size = None
+    test_size = Variable.get("rf_test_size")
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42, stratify=y)
-    return None, None, None, None
+    return X_train, X_test, y_train, y_test
 
 @task
 def train_model(X_train: np.ndarray, y_train: np.ndarray) -> RandomForestClassifier:
@@ -55,9 +60,10 @@ def train_model(X_train: np.ndarray, y_train: np.ndarray) -> RandomForestClassif
     # 1. Get hyperparameters from Prefect variables (n_estimators, max_depth)
     # 2. Create and train RandomForestClassifier
     # 3. Return the trained model
-    n_estimators = None
-    max_depth = None
-    model = None
+    n_estimators = Variable.get("rf_n_estimators")
+    max_depth = Variable.get("rf_max_depth")
+    model = RandomForestClassifier(n_estimators=n_estimators, max_depth=max_depth, random_state=42)
+    model.fit(X_train, y_train)
     return model
 
 @task
@@ -84,7 +90,7 @@ def iris_classification_flow() -> float:
     #    - evaluate_model()
     # 5. Log the model using mlflow.sklearn.log_model()
     # 6. Return the accuracy
-    tracking_uri = None
+    tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
     mlflow.set_tracking_uri(tracking_uri)
     experiment_name = "iris_classification"
     mlflow.set_experiment(experiment_name)
@@ -95,7 +101,7 @@ def iris_classification_flow() -> float:
         X_train, X_test, y_train, y_test = split_data(X, y)
         model = train_model(X_train, y_train)
         accuracy = evaluate_model(model, X_test, y_test)
-        mlflow.sklearn.log_model(model, model_name, registered_model_name=model_name, model_version=model_version)
+        mlflow.sklearn.log_model(sk_model=model, name=model_name, registered_model_name=model_name)
         return accuracy
 
 if __name__ == "__main__":

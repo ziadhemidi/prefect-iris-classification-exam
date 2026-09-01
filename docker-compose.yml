@@ -20,6 +20,7 @@ services:
         restart: unless-stopped
 
     mlflow:
+        image: mlflow-server:latest
         build:
             context: .
             dockerfile: docker_files/mlflow.Dockerfile
@@ -46,6 +47,7 @@ services:
         restart: unless-stopped
 
     prefect-server:
+        image: prefect-server:latest
         build:
             context: .
             dockerfile: docker_files/prefect.Dockerfile
@@ -87,9 +89,33 @@ services:
     #    - Initialize blocks using init.py
     #    - Create work pool 'ml-pool'
     #    - Create deployment using create_deployment.py
-    prefect-init: None
+    prefect-init: 
+        build:
+            context: .
+            dockerfile: docker_files/prefect.Dockerfile
+        container_name: prefect-init
+        restart: "no"
+        depends_on:
+            prefect-server:
+                condition: service_healthy
+        environment:
+            - PREFECT_API_URL=http://prefect-server:4200/api
+            - GITHUB_TOKEN=${GH_TOKEN}
+            - GITHUB_REPOSITORY=${GITHUB_REPOSITORY}
+            - GITHUB_BRANCH=${GITHUB_BRANCH}
+            - MLFLOW_TRACKING_URI=http://mlflow:5000
+        volumes:
+            - .:/app
+        working_dir: /app
+        command: >
+            bash -c "
+            python init_blocks/init.py &&
+            (prefect work-pool inspect ml-pool >/dev/null 2>&1 || prefect work-pool create ml-pool --type process) &&
+            python deployments/create_deployment.py
+            "
 
     prefect-worker:
+        image: prefect-server:latest
         build:
             context: .
             dockerfile: docker_files/prefect.Dockerfile
