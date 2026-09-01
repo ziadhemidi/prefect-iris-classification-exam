@@ -108,7 +108,7 @@ def iris_classification_flow() -> float:
         accuracy = evaluate_model(model, X_test, y_test)
         mlflow.sklearn.log_model(sk_model=model, name=model_name, registered_model_name=model_name)
         
-        mlflow.log_paramters({
+        mlflow.log_params({
             "n_estimators": n_estimators,
             "max_depth": max_depth,
             "test_size": test_size,
