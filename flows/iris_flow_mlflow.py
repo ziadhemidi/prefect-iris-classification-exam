@@ -49,7 +49,7 @@ def split_data(X: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np
     # 1. Get test_size from Prefect variables
     # 2. Use train_test_split
     # 3. Return X_train, X_test, y_train, y_test
-    test_size = Variable.get("rf_test_size")
+    test_size = float(Variable.get("rf_test_size"))
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42, stratify=y)
     return X_train, X_test, y_train, y_test
 
