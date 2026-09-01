@@ -29,7 +29,7 @@ def setup_variables():
     Variable.set("model_version", 1)
     
 
-@task
+@task(retries=3)
 def load_data() -> Tuple[np.ndarray, np.ndarray]:
     """Load the iris dataset."""
     # TODO: Implement data loading
@@ -38,9 +38,14 @@ def load_data() -> Tuple[np.ndarray, np.ndarray]:
     # 3. Log the dataset shape
     # 4. Return X, y
     logger = get_run_logger()
-    X, y = load_iris(return_X_y=True)
-    logger.info(f"Dataset loaded with shape: {X.shape}")
-    return X, y
+    try:
+        X, y = load_iris(return_X_y=True)
+        logger.info(f"Dataset loaded with shape: {X.shape}")
+        return X, y
+    except Exception as e:
+        logger.error(f"Error loading data: {str(e)}")
+        raise
+
 
 @task
 def split_data(X: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -49,7 +54,7 @@ def split_data(X: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np
     # 1. Get test_size from Prefect variables
     # 2. Use train_test_split
     # 3. Return X_train, X_test, y_train, y_test
-    test_size = float(Variable.get("rf_test_size"))
+    test_size = float(Variable.get("rf_test_size", default=0.2))
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42, stratify=y)
     return X_train, X_test, y_train, y_test
 
@@ -60,8 +65,13 @@ def train_model(X_train: np.ndarray, y_train: np.ndarray) -> RandomForestClassif
     # 1. Get hyperparameters from Prefect variables (n_estimators, max_depth)
     # 2. Create and train RandomForestClassifier
     # 3. Return the trained model
-    n_estimators = int(Variable.get("rf_n_estimators"))
-    max_depth = int(Variable.get("rf_max_depth"))
+    n_estimators = int(
+        Variable.get("rf_n_estimators", default=100)
+    )
+    max_depth = int(
+        Variable.get("rf_max_depth", default=10)
+    )
+
     model = RandomForestClassifier(n_estimators=n_estimators, max_depth=max_depth, random_state=42)
     model.fit(X_train, y_train)
     return model
@@ -94,8 +104,15 @@ def iris_classification_flow() -> float:
     mlflow.set_tracking_uri(tracking_uri)
     experiment_name = "iris_classification"
     mlflow.set_experiment(experiment_name)
-    model_name = Variable.get("model_name")
-    model_version = Variable.get("model_version")   
+    model_name = Variable.get(
+        "model_name",
+        default="iris_model",
+    )
+
+    model_version = Variable.get(
+        "model_version",
+        default=1,
+    )   
    
      
     with mlflow.start_run(run_name="iris_classification_run", nested=True):
@@ -109,11 +126,6 @@ def iris_classification_flow() -> float:
             "n_estimators": model.n_estimators,
             "max_depth": model.max_depth,
             "test_size": len(y_test) / (len(y_train) + len(y_test)),
-        })
-         
-        mlflow.log_metrics({
-        "accuracy": accuracy,
-        "n_test_samples": len(y_test),
         })
         
         feature_names = [
