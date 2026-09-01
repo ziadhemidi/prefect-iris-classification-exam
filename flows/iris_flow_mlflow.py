@@ -60,8 +60,8 @@ def train_model(X_train: np.ndarray, y_train: np.ndarray) -> RandomForestClassif
     # 1. Get hyperparameters from Prefect variables (n_estimators, max_depth)
     # 2. Create and train RandomForestClassifier
     # 3. Return the trained model
-    n_estimators = Variable.get("rf_n_estimators")
-    max_depth = Variable.get("rf_max_depth")
+    n_estimators = int(Variable.get("rf_n_estimators"))
+    max_depth = int(Variable.get("rf_max_depth"))
     model = RandomForestClassifier(n_estimators=n_estimators, max_depth=max_depth, random_state=42)
     model.fit(X_train, y_train)
     return model
