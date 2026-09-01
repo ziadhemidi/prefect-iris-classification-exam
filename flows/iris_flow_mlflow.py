@@ -96,11 +96,7 @@ def iris_classification_flow() -> float:
     mlflow.set_experiment(experiment_name)
     model_name = Variable.get("model_name")
     model_version = Variable.get("model_version")   
-    mlflow.log_params({
-        "n_estimators": model.n_estimators,
-        "max_depth": model.max_depth,
-        "test_size": len(y_test) / (len(y_train) + len(y_test)),
-    })
+   
      
     with mlflow.start_run(run_name="iris_classification_run", nested=True):
         X, y = load_data()
@@ -109,6 +105,12 @@ def iris_classification_flow() -> float:
         accuracy = evaluate_model(model, X_test, y_test)
         mlflow.sklearn.log_model(sk_model=model, name=model_name, registered_model_name=model_name)
         
+        mlflow.log_params({
+            "n_estimators": model.n_estimators,
+            "max_depth": model.max_depth,
+            "test_size": len(y_test) / (len(y_train) + len(y_test)),
+        })
+         
         mlflow.log_metrics({
         "accuracy": accuracy,
         "n_test_samples": len(y_test),
