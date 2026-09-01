@@ -26,7 +26,7 @@ services:
             dockerfile: docker_files/mlflow.Dockerfile
         container_name: mlflow-server
         ports:
-            - "5001:5000"
+            - "5000:5000"
         volumes:
             - mlflow_data:/mlruns
         environment:
@@ -60,13 +60,14 @@ services:
                 condition: service_healthy
         environment:
             - PREFECT_API_DATABASE_CONNECTION_URL=postgresql+asyncpg://prefect:prefect@prefect-db:5432/prefect
-            - PREFECT_API_URL=http://0.0.0.0:4200/api
+            # - PREFECT_API_URL=http://0.0.0.0:4200/api
+            - PREFECT_SERVER_UI_API_URL=${PREFECT_API_URL}
             - PREFECT_SERVER_API_HOST=0.0.0.0
             - PREFECT_LOGGING_LEVEL=INFO
         volumes:
             - .:/app
         working_dir: /app
-        command: prefect server start
+        command: prefect server start 
         healthcheck:
             test: ["CMD", "curl", "-f", "http://localhost:4200/api/health"]
             interval: 10s

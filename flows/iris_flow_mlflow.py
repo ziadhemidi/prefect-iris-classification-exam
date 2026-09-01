@@ -96,12 +96,41 @@ def iris_classification_flow() -> float:
     mlflow.set_experiment(experiment_name)
     model_name = Variable.get("model_name")
     model_version = Variable.get("model_version")
+    
+    n_estimators = int(Variable.get("rf_n_estimators"))
+    max_depth = int(Variable.get("rf_max_depth"))
+    test_size = float(Variable.get("rf_test_size"))
+    
     with mlflow.start_run(run_name="iris_classification_run", nested=True):
         X, y = load_data()
         X_train, X_test, y_train, y_test = split_data(X, y)
         model = train_model(X_train, y_train)
         accuracy = evaluate_model(model, X_test, y_test)
         mlflow.sklearn.log_model(sk_model=model, name=model_name, registered_model_name=model_name)
+        
+        mlflow.log_paramters({
+            "n_estimators": n_estimators,
+            "max_depth": max_depth,
+            "test_size": test_size,
+        })
+        
+        mlflow.log_metrics({
+        "accuracy": accuracy,
+        "n_test_samples": len(y_test),
+        })
+        
+        feature_names = [
+            "sepal_length_cm",
+            "sepal_width_cm",
+            "petal_length_cm",
+            "petal_width_cm",
+        ]
+
+        for feature_name, importance in zip(feature_names, model.feature_importances_):
+            mlflow.log_metric(
+                f"importance_{feature_name}",
+                float(importance),
+            )
         return accuracy
 
 if __name__ == "__main__":
